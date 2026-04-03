@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>2025大台南公車運量視覺化分析</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons&display=block" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --primary: #455a64;
+    --primary-dark: #263238;
+    --primary-light: #cfd8dc;
+    --secondary: #607d8b;
+    --accent: #f57c00;
+    --sv: #eceff1;
+    --on-s: #1c1b1f;
+    --on-sv: #49454f;
+    --outline: #b0bec5;
+    --outline-v: #cfd8dc;
+    --bg: #f0f2f3;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --bar-h: 56px;
+    --e1: 0 1px 3px rgba(0,0,0,.12);
+    --e2: 0 2px 6px rgba(0,0,0,.14);
+    --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 100px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--on-s); min-height: 100%; overscroll-behavior: none; }
+  body { padding-bottom: calc(40px + var(--safe-bottom)); }
+
+  .top-bar { position: sticky; top: 0; z-index: 200; background: var(--primary); color: #fff; height: var(--bar-h); display: flex; align-items: center; gap: 12px; padding: 0 16px; box-shadow: var(--e2); }
+  .top-bar h1 { font-size: 17px; font-weight: 700; flex: 1; }
+
+  .page { padding: 14px; max-width: 700px; margin: 0 auto; min-height: calc(100vh - var(--bar-h) - 80px); }
+
+  .qtype-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .qtab { flex: 1; padding: 12px; border-radius: var(--r-xl); background: #fff; font-size: 13px; font-weight: 700; color: var(--on-sv); display: flex; align-items: center; justify-content: center; gap: 6px; transition: all .2s; border: 1.5px solid var(--outline); cursor: pointer; }
+  .qtab.active { border-color: var(--primary); background: var(--primary); color: #fff; }
+
+  .card { background: #fff; border-radius: var(--r-lg); box-shadow: var(--e1); overflow: hidden; margin-bottom: 12px; }
+  .card-bd { padding: 16px; }
+
+  .field { margin-bottom: 16px; }
+  .flabel { font-size: 11px; font-weight: 700; color: var(--secondary); margin-bottom: 6px; display: block; letter-spacing: .5px; }
+  .sel-wrap { position: relative; }
+  select, input { width: 100%; font-family: inherit; font-size: 16px; padding: 12px; border: 1.5px solid var(--outline); border-radius: var(--r-sm); background: #fff; outline: none; -webkit-appearance: none; }
+  select:focus, input:focus { border-color: var(--primary); }
+  .sel-ico { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--secondary); pointer-events: none; }
+
+  .btn { width: 100%; padding: 14px; background: var(--primary); color: #fff; border: none; border-radius: var(--r-xl); font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+  .btn:disabled { background: var(--outline); opacity: 0.6; cursor: not-allowed; }
+
+  .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 300; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .modal { background: #fff; border-radius: var(--r-lg); width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; box-shadow: var(--e2); }
+  .modal-hd { padding: 20px; text-align: center; border-bottom: 1px solid var(--outline-v); position: sticky; top:0; background: #fff; z-index: 10; }
+  .modal-bd { padding: 16px; }
+  .m-opt { width: 100%; padding: 16px; border: 1.5px solid var(--outline-v); border-radius: var(--r-md); margin-bottom: 8px; text-align: left; background: #fff; cursor: pointer; display: flex; flex-direction: column; transition: background 0.2s; }
+  .m-opt:active { background: #f0f0f0; }
+  .m-opt.special { border-color: var(--primary); background: var(--primary-light); }
+
+  .result-card { border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--e2); background: #fff; margin-top: 16px; animation: slideIn 0.3s ease-out; }
+  @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  
+  .result-hd { padding: 20px; color: #fff; }
+  .res-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.2); padding: 4px 12px; font-size: 11px; font-weight: 700; margin-bottom: 8px; border-radius: 20px; }
+  .res-name { font-size: 28px; font-weight: 900; margin-bottom: 4px; }
+  .res-meta { font-size: 13px; opacity: 0.9; display: flex; align-items: flex-start; gap: 6px; margin-top: 4px; }
+
+  .pills-wrap { display: flex; gap: 8px; overflow-x: auto; padding: 12px 16px; background: #fff; border-bottom: 1px solid var(--outline-v); scrollbar-width: none; }
+  .pill { flex-shrink: 0; padding: 8px 16px; border-radius: 20px; border: 1.5px solid var(--outline); font-size: 13px; font-weight: 600; cursor: pointer; color: var(--on-sv); }
+  .pill.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary); font-weight: 700; }
+
+  .ridership-box { margin: 16px; padding: 24px; background: var(--sv); border-radius: var(--r-md); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .r-val { font-size: 46px; font-weight: 900; color: var(--primary); letter-spacing: -1.5px; }
+  .r-label { font-size: 13px; font-weight: 700; color: var(--secondary); letter-spacing: 1px; }
+  
+  .r-trend { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 12px; margin-top: 4px; }
+  .trend-up { background: #ffebee; color: #c62828; }
+  .trend-down { background: #e8f5e9; color: #2e7d32; }
+  .trend-neutral { background: #f5f5f5; color: #757575; }
+
+  .chart-container { padding: 16px; border-top: 1px solid var(--outline-v); height: 260px; }
+
+  .memo-box { margin: 0 16px 16px; padding: 14px; background: #fffef2; border: 1px solid #ffeeba; border-radius: var(--r-md); }
+  .memo-item { font-size: 13px; color: #856404; display: flex; gap: 6px; margin-bottom: 4px; line-height: 1.4; }
+
+  .suggestions { border: 1px solid var(--outline); background: #fff; max-height: 200px; overflow-y: auto; border-radius: 0 0 8px 8px; display: none; position: absolute; width: 100%; z-index: 100; box-shadow: var(--e2); }
+  .sug-item { padding: 12px; border-bottom: 1px solid var(--sv); display: flex; justify-content: space-between; font-size: 14px; cursor: pointer; }
+
+  .footer { text-align: center; padding: 24px 16px; color: var(--secondary); font-size: 12px; line-height: 1.6; }
+  .footer a { color: var(--primary); text-decoration: none; font-weight: 700; border-bottom: 1px solid var(--primary-light); }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <span class="material-icons">analytics</span>
+  <h1>2025 大台南公車運量視覺化分析</h1>
+</div>
+
+<div id="modal-overlay" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-hd">
+      <h3>數據來源選擇</h3>
+      <p style="font-size:12px;color:#666">偵測到聯營或混合數據，請選擇：</p>
+    </div>
+    <div id="modal-bd" class="modal-bd"></div>
+    <div style="padding: 0 12px 20px;"><button class="btn" style="background: #f5f5f5; color: #666;" onclick="closeModal()">取消</button></div>
+  </div>
+</div>
+
+<div id="p-home" class="page">
+  <div class="qtype-row">
+    <button class="qtab active" onclick="switchMode('cat', event)"><span class="material-icons">category</span> 類別</button>
+    <button class="qtab" onclick="switchMode('name', event)"><span class="material-icons">search</span> 搜尋</button>
+  </div>
+
+  <div id="q-cat" class="card">
+    <div class="card-bd">
+      <div class="field">
+        <label class="flabel">1. 選擇類別</label>
+        <div class="sel-wrap">
+          <select id="sel-cat" onchange="onCatSelect()">
+            <option value="">-- 請選擇 --</option>
+            <option value="green">綠線</option>
+            <option value="blue">藍線</option>
+            <option value="brown">棕線</option>
+            <option value="orange">橘線</option>
+            <option value="yellow">黃線</option>
+            <option value="red">紅線</option>
+            <option value="life">生活公車</option>
+            <option value="metro">都會公車</option>
+            <option value="neighbor">厝邊公車</option>
+            <option value="tour">觀光公車</option>
+            <option value="hsr">高鐵接駁</option>
+          </select>
+          <span class="material-icons sel-ico">expand_more</span>
+        </div>
+      </div>
+      <div class="field">
+        <label class="flabel">2. 選擇路線</label>
+        <div class="sel-wrap">
+          <select id="sel-route" disabled onchange="checkBtn()"><option value="">請先選類別</option></select>
+          <span class="material-icons sel-ico">expand_more</span>
+        </div>
+      </div>
+      <button id="btn-query" class="btn" disabled onclick="handlePreQuery()">開始分析</button>
+    </div>
+  </div>
+
+  <div id="q-name" class="card" style="display:none">
+    <div class="card-bd">
+      <div class="field" style="position:relative">
+        <label class="flabel">輸入關鍵字 (如: 904, 黃幹線...)</label>
+        <input type="text" id="in-name" placeholder="請輸入..." oninput="onInputSearch()">
+        <div id="sug-list" class="suggestions"></div>
+      </div>
+      <button id="btn-search" class="btn" disabled onclick="handlePreSearch()">搜尋分析</button>
+    </div>
+  </div>
+
+  <div id="result-container"></div>
+</div>
+
+<footer class="footer">
+  <p>數據校對 Izien</p>
+  <p>資訊來源 <a href="https://data.tainan.gov.tw/Resource/d3e854e6-8c5d-4091-a09c-efccf4fb1c8a" target="_blank">DATA.Tainan</a></p>
+</footer>
+
+<script>
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vThpZNHJtO5jyJQSpJR3G6AkdoCz5fkSRsTdoCA-P-vl5PnvvVd45YV_fXzrqcVrUA1nqXQckRZ23eI/pub?output=csv';
+
+const generateRange = (s, e) => Array.from({length: e - s + 1}, (_, i) => s + i);
+
+const CATEGORIES = {
+  green: { label: "綠線", color: "#2e7d32", seqs: generateRange(1, 26).concat(generateRange(28, 38)) },
+  blue: { label: "藍線", color: "#1565c0", seqs: generateRange(39, 59) },
+  brown: { label: "棕線", color: "#5d4037", seqs: generateRange(60, 71) },
+  orange: { label: "橘線", color: "#e65100", seqs: generateRange(72, 87) },
+  yellow: { label: "黃線", color: "#f9a825", seqs: generateRange(88, 111).concat(generateRange(113, 122)) },
+  red: { label: "紅線", color: "#c62828", seqs: generateRange(123, 135) },
+  life: { label: "生活公車", color: "#455a64", seqs: generateRange(136, 137).concat(generateRange(139, 152)).concat([155, 168]).concat(generateRange(153, 154)) },
+  metro: { label: "都會公車", color: "#37474f", seqs: [138] },
+  neighbor: { label: "厝邊公車", color: "#6a1b9a", seqs: generateRange(156, 159) },
+  tour: { label: "觀光公車", color: "#ad1457", seqs: [161, 162, 160, 163, 166, 27, 112, 165, 164] },
+  hsr: { label: "高鐵接駁", color: "#e64a19", seqs: [167] }
+};
+
+const SERVICE_SPECIALS = ["綠14", "綠15", "綠20", "棕2", "黃2", "黃5", "黃15", "黃20", "紅11", "紅13"];
+const JOINT_SPECIALS = ["黃幹線", "棕幹線"];
+const SPECIAL_RULES = {
+  "綠12-1": {
+    type: "section",
+    options: [
+      { id: "13", label: "左鎮果菜市場-南化區公所", desc: "單獨查看 Seq 13 數據" },
+      { id: "14", label: "左鎮果菜市場-厚德紫竹寺", desc: "單獨查看 Seq 14 數據" },
+      { id: "sum", label: "全部合併計算", desc: "Seq 13 + 14 加總", isSum: true }
+    ]
+  }
+};
+SERVICE_SPECIALS.forEach(r => { SPECIAL_RULES[r] = { type: "service" }; });
+JOINT_SPECIALS.forEach(r => { SPECIAL_RULES[r] = { type: "joint" }; });
+
+let db = [];
+let trendChart = null;
+
+const cleanNum = (v) => v ? parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0 : 0;
+const formatNum = (v) => Math.round(cleanNum(v)).toLocaleString();
+
+async function init() {
+  try {
+    const res = await fetch(CSV_URL);
+    const text = await res.text();
+    const rows = parseCSV(text);
+    db = rows.slice(1).map(r => ({
+      seq: parseInt(r[0]), name: r[1]?.trim(), path: r[2]?.trim(),
+      category: r[3]?.trim(), operator: r[4]?.trim(),
+      months: {
+        S: r[18], G: r[6], H: r[7], I: r[8], J: r[9], K: r[10],
+        L: r[11], M: r[12], N: r[13], O: r[14], P: r[15], Q: r[16], R: r[17]
+      },
+      memo1: r[19]?.trim(), memo2: r[20]?.trim()
+    })).filter(i => !isNaN(i.seq));
+  } catch (e) { console.error(e); }
+}
+
+function parseCSV(text) {
+  const result = [];
+  const lines = text.split(/\r?\n/);
+  for (let line of lines) {
+    if (!line.trim()) continue;
+    const parts = []; let cur = ""; let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      let char = line[i];
+      if (char === '"') inQuotes = !inQuotes;
+      else if (char === ',' && !inQuotes) { parts.push(cur); cur = ""; }
+      else cur += char;
+    }
+    parts.push(cur); result.push(parts);
+  }
+  return result;
+}
+
+function handlePreQuery() {
+  const seq = parseInt(document.getElementById('sel-route').value);
+  const item = db.find(i => i.seq === seq);
+  if (item && SPECIAL_RULES[item.name]) openSpecialModal(item.name);
+  else renderResult(seq);
+}
+
+function handlePreSearch() {
+  const val = document.getElementById('in-name').value.trim();
+  const match = db.find(i => i.name === val);
+  if (match && SPECIAL_RULES[match.name]) openSpecialModal(match.name);
+  else if (match) renderResult(match.seq);
+}
+
+function openSpecialModal(routeName) {
+  const rule = SPECIAL_RULES[routeName];
+  const bd = document.getElementById('modal-bd');
+  let opts = [];
+  if (rule.type === "section") opts = rule.options;
+  else if (rule.type === "service") {
+    opts = [
+      { id: `bus_${routeName}`, label: "一般公車", desc: "查看「幹支線」營運數據", filter: "幹支線", filterKey: "category" },
+      { id: `taxi_${routeName}`, label: "小黃公車", desc: "查看「小黃公車」營運數據", filter: "小黃公車", filterKey: "category" },
+      { id: `sum_${routeName}`, label: "全部合併計算", desc: "一般公車 + 小黃公車 加總", isSum: true }
+    ];
+  } else if (rule.type === "joint") {
+    opts = [
+      { id: `xin_${routeName}`, label: "興南客運", desc: "查看單獨「興南」營運數據", filter: "興南", filterKey: "operator" },
+      { id: `ying_${routeName}`, label: "新營客運", desc: "查看單獨「新營」營運數據", filter: "新營", filterKey: "operator" },
+      { id: `sum_${routeName}`, label: "聯營總運量", desc: "興南 + 新營 數據加總", isSum: true }
+    ];
+  }
+  bd.innerHTML = opts.map(o => `
+    <button class="m-opt ${o.isSum?'special':''}" onclick="selectSpecialOption('${routeName}','${o.id}','${o.filter||''}','${o.filterKey||''}')">
+      <b style="font-size:16px">${o.label}</b>
+      <span style="font-size:12px;color:#666">${o.desc}</span>
+    </button>
+  `).join('');
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
+
+function selectSpecialOption(routeName, optionId, filterValue, filterKey) {
+  closeModal();
+  if (optionId.includes('sum')) renderSumResult(routeName);
+  else if (filterValue) {
+    const item = db.find(i => i.name === routeName && i[filterKey].includes(filterValue));
+    if (item) displayResult(item, false, `(${filterValue})`);
+  } else renderResult(parseInt(optionId));
+}
+
+function renderSumResult(routeName) {
+  const parts = (SPECIAL_RULES[routeName].type === "section") ? db.filter(i => [13,14].includes(i.seq)) : db.filter(i => i.name === routeName);
+  if (!parts.length) return;
+  const combined = {
+    name: routeName, seq: parts.map(p => p.seq).join(' + '), path: "合併運量分析數據",
+    operator: parts.map(p => p.operator).filter((v, i, a) => a.indexOf(v) === i).join('、'), 
+    months: {}, memo1: parts[0].memo1, memo2: parts[0].memo2
+  };
+  ["S","G","H","I","J","K","L","M","N","O","P","Q","R"].forEach(k => {
+    combined.months[k] = parts.reduce((acc, curr) => acc + cleanNum(curr.months[k]), 0);
+  });
+  displayResult(combined, true, "(加總)");
+}
+
+function renderResult(seq) {
+  const item = db.find(i => i.seq === seq);
+  if (item) displayResult(item);
+}
+
+function displayResult(item, isSum = false, suffix = "") {
+  let catInfo = { label: "一般路線", color: "#455a64" };
+  const firstSeqNum = parseInt(item.seq.toString().split(' + ')[0]);
+  for (let k in CATEGORIES) { if (CATEGORIES[k].seqs.includes(firstSeqNum)) { catInfo = CATEGORIES[k]; break; } }
+
+  const monthKeys = ["G","H","I","J","K","L","M","N","O","P","Q","R"];
+  
+  let firstActiveMonthIdx = -1;
+  const monthData = monthKeys.map((k, idx) => {
+    const val = cleanNum(item.months[k]);
+    if (val > 0 && firstActiveMonthIdx === -1) firstActiveMonthIdx = idx;
+    return val;
+  });
+
+  const trendData = monthKeys.map((k, idx) => {
+    const cur = monthData[idx];
+    if (idx === 0 || idx === firstActiveMonthIdx) return null;
+    const prev = monthData[idx-1];
+    if (prev === 0) return null;
+    return (((cur - prev) / prev) * 100).toFixed(1);
+  });
+
+  const container = document.getElementById('result-container');
+  container.innerHTML = `
+    <div class="result-card">
+      <div class="result-hd" style="background:${catInfo.color}">
+        <div class="res-badge"><span class="material-icons" style="font-size:12px">directions_bus</span> ${catInfo.label}</div>
+        <div class="res-name">${item.name} <span style="font-size:16px;opacity:0.8">${suffix}</span></div>
+        <div class="res-meta"><span class="material-icons">business</span><span>${item.operator}</span></div>
+        <div class="res-meta"><span class="material-icons">route</span><span>${item.path}</span></div>
+      </div>
+      <div class="pills-wrap">
+        <div class="pill active" onclick="updateUI(this, '${item.months.S}', '全年度總計', null)">年度</div>
+        ${monthKeys.map((k, i) => {
+          if (monthData[i] <= 0) return '';
+          return `<div class="pill" onclick="updateUI(this, '${item.months[k]}', '${i+1}月運量', ${trendData[i]}, ${i})">${i+1}月</div>`;
+        }).join('')}
+      </div>
+      <div class="ridership-box">
+        <div id="v-label" class="r-label">全年度總計</div>
+        <div id="v-num" class="r-val">${formatNum(item.months.S)}</div>
+        <div id="v-trend" class="r-trend" style="display:none"></div>
+      </div>
+      <div class="chart-container"><canvas id="trendChart"></canvas></div>
+      ${(item.memo1 || item.memo2) ? `<div class="memo-box">
+        ${item.memo1 ? `<div class="memo-item"><span class="material-icons">info</span><span>${item.memo1}</span></div>`:''}
+        ${item.memo2 ? `<div class="memo-item"><span class="material-icons">event_note</span><span>${item.memo2}</span></div>`:''}
+      </div>` : ''}
+    </div>
+  `;
+  
+  createTrendChart(monthData, catInfo.color);
+  container.scrollIntoView({ behavior: 'smooth' });
+}
+
+function updateUI(el, val, label, trend, idx = null) {
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('v-label').textContent = label;
+  document.getElementById('v-num').textContent = formatNum(val);
+  
+  const tr = document.getElementById('v-trend');
+  if (trend !== null) {
+    tr.style.display = 'flex';
+    const icon = trend > 0 ? 'trending_up' : (trend < 0 ? 'trending_down' : 'trending_flat');
+    const cls = trend > 0 ? 'trend-up' : (trend < 0 ? 'trend-down' : 'trend-neutral');
+    tr.className = 'r-trend ' + cls;
+    tr.innerHTML = `<span class="material-icons" style="font-size:16px">${icon}</span> 較上月 ${trend > 0 ? '+':''}${trend}%`;
+  } else {
+    tr.style.display = 'none';
+  }
+
+  if (trendChart && idx !== null) {
+    trendChart.setActiveElements([{datasetIndex: 0, index: idx}]);
+    trendChart.tooltip.setActiveElements([{datasetIndex: 0, index: idx}], {x: 0, y: 0});
+    trendChart.update();
+  }
+}
+
+function createTrendChart(data, color) {
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  if (trendChart) trendChart.destroy();
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+      datasets: [{
+        label: '每月運量人次',
+        data: data,
+        borderColor: color,
+        backgroundColor: color + '1A',
+        borderWidth: 4,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 8,
+        pointBackgroundColor: '#fff',
+        pointBorderWidth: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { 
+        legend: { display: false }, 
+        tooltip: { 
+          cornerRadius: 8, 
+          padding: 10,
+          callbacks: {
+            label: (ctx) => ` 運量: ${ctx.parsed.y.toLocaleString()} 人次`
+          }
+        } 
+      },
+      scales: {
+        y: { beginAtZero: false, display: false },
+        x: { grid: { display: false }, ticks: { font: { weight: '600' } } }
+      }
+    }
+  });
+}
+
+function switchMode(m, e) {
+  document.getElementById('q-cat').style.display = m==='cat'?'block':'none';
+  document.getElementById('q-name').style.display = m==='name'?'block':'none';
+  document.querySelectorAll('.qtab').forEach(t => t.classList.remove('active'));
+  e.currentTarget.classList.add('active');
+}
+
+function onCatSelect() {
+  const catKey = document.getElementById('sel-cat').value;
+  const sel = document.getElementById('sel-route');
+  sel.innerHTML = '<option value="">-- 請選擇路線 --</option>';
+  if (!catKey) { sel.disabled = true; return; }
+  const seen = new Set();
+  db.filter(i => CATEGORIES[catKey].seqs.includes(i.seq)).forEach(item => {
+    if (!seen.has(item.name)) {
+      const opt = document.createElement('option'); opt.value = item.seq; opt.textContent = item.name;
+      sel.appendChild(opt); seen.add(item.name);
+    }
+  });
+  sel.disabled = false;
+}
+
+function checkBtn() { document.getElementById('btn-query').disabled = !document.getElementById('sel-route').value; }
+
+function onInputSearch() {
+  const v = document.getElementById('in-name').value.trim().toLowerCase();
+  const sug = document.getElementById('sug-list');
+  if (!v) { sug.style.display = 'none'; return; }
+  const seen = new Set();
+  const matches = db.filter(i => i.name.toLowerCase().includes(v)).filter(i => {
+    if (seen.has(i.name)) return false;
+    seen.add(i.name); return true;
+  }).slice(0, 5);
+  if (matches.length) {
+    sug.innerHTML = matches.map(m => `<div class="sug-item" onclick="selectSug('${m.seq}','${m.name}')"><b>${m.name}</b><span style="color:#888;font-size:11px">${m.operator}</span></div>`).join('');
+    sug.style.display = 'block';
+    document.getElementById('btn-search').disabled = false;
+  } else sug.style.display = 'none';
+}
+
+function selectSug(seq, name) {
+  document.getElementById('in-name').value = name;
+  document.getElementById('sug-list').style.display = 'none';
+  if (SPECIAL_RULES[name]) openSpecialModal(name);
+  else renderResult(parseInt(seq));
+}
+init();
+</script>
+</body>
+</html>
