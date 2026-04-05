@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>2025大台南公車運量視覺化分析</title>
+<title>2025大台南公車運量分析</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -23,210 +23,374 @@
     --outline-v: #cfd8dc;
     --bg: #f0f2f3;
     --safe-bottom: env(safe-area-inset-bottom, 0px);
-    --bar-h: 56px;
+    --bar-h: 64px;
     --e1: 0 1px 3px rgba(0,0,0,.12);
-    --e2: 0 2px 6px rgba(0,0,0,.14);
+    --e2: 0 4px 12px rgba(0,0,0,.08);
     --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 100px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--on-s); min-height: 100%; overscroll-behavior: none; }
-  body { padding-bottom: calc(40px + var(--safe-bottom)); }
+  body { padding-top: var(--bar-h); padding-bottom: calc(40px + var(--safe-bottom)); }
 
-  .top-bar { position: sticky; top: 0; z-index: 200; background: var(--primary); color: #fff; height: var(--bar-h); display: flex; align-items: center; gap: 12px; padding: 0 16px; box-shadow: var(--e2); }
-  .top-bar h1 { font-size: 17px; font-weight: 700; flex: 1; }
+  /* 頂部導覽列 */
+  .top-navbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 200;
+    height: var(--bar-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 1px 10px rgba(0,0,0,0.05);
+  }
+  .nav-brand { display: flex; align-items: center; gap: 8px; color: var(--primary); }
+  .nav-brand .material-icons { font-size: 24px; }
+  .nav-brand h1 { font-size: 16px; font-weight: 900; letter-spacing: 0.5px; }
+  .menu-btn {
+    background: var(--sv);
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .menu-btn:active { transform: scale(0.9); background: var(--primary-light); }
 
-  .page { padding: 14px; max-width: 700px; margin: 0 auto; min-height: calc(100vh - var(--bar-h) - 80px); }
+  /* 側邊欄 */
+  .sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 400; display: none; opacity: 0; transition: opacity 0.3s; }
+  .sidebar { position: fixed; top: 0; right: -280px; width: 280px; height: 100%; background: #fff; z-index: 401; box-shadow: -2px 0 20px rgba(0,0,0,0.15); transition: right 0.3s cubic-bezier(0.4,0,0.2,1); display: flex; flex-direction: column; }
+  .sidebar.open { right: 0; }
+  .sidebar-hd { padding: 40px 24px; background: var(--primary); color: #fff; }
+  .sidebar-hd h2 { font-size: 20px; font-weight: 900; margin-bottom: 4px; }
+  .sidebar-menu { padding: 12px 0; flex: 1; }
+  .menu-item { width: 100%; padding: 16px 24px; border: none; background: none; display: flex; align-items: center; gap: 16px; color: var(--on-sv); font-family: 'Noto Sans TC', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; text-align: left; }
+  .menu-item.active { color: var(--primary); background: var(--primary-light); font-weight: 700; }
 
-  .qtype-row { display: flex; gap: 8px; margin-bottom: 12px; }
-  .qtab { flex: 1; padding: 12px; border-radius: var(--r-xl); background: #fff; font-size: 13px; font-weight: 700; color: var(--on-sv); display: flex; align-items: center; justify-content: center; gap: 6px; transition: all .2s; border: 1.5px solid var(--outline); cursor: pointer; }
-  .qtab.active { border-color: var(--primary); background: var(--primary); color: #fff; }
+  /* 內容頁面 */
+  .page { padding: 20px 16px; max-width: 680px; margin: 0 auto; display: none; }
+  .page.active { display: block; animation: slideUp 0.4s ease; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .section-title { font-size: 24px; font-weight: 900; color: var(--primary); display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
 
-  .card { background: #fff; border-radius: var(--r-lg); box-shadow: var(--e1); overflow: hidden; margin-bottom: 12px; }
-  .card-bd { padding: 16px; }
+  /* Dashboard */
+  .dash-hero { background: linear-gradient(135deg, var(--primary-dark), var(--primary)); border-radius: var(--r-lg); color: #fff; padding: 32px 24px; margin-bottom: 16px; box-shadow: var(--e2); }
+  .dash-hero-label { font-size: 12px; opacity: 0.7; font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .dash-hero-val { font-size: 52px; font-weight: 900; line-height: 1; margin-bottom: 8px; }
+  .dash-hero-sub { font-size: 14px; opacity: 0.8; }
 
-  .field { margin-bottom: 16px; }
-  .flabel { font-size: 11px; font-weight: 700; color: var(--secondary); margin-bottom: 6px; display: block; letter-spacing: .5px; }
-  .sel-wrap { position: relative; }
-  select, input { width: 100%; font-family: inherit; font-size: 16px; padding: 12px; border: 1.5px solid var(--outline); border-radius: var(--r-sm); background: #fff; outline: none; -webkit-appearance: none; }
+  .card { background: #fff; border-radius: var(--r-lg); box-shadow: var(--e1); overflow: hidden; margin-bottom: 16px; }
+  .card-hd { padding: 16px 20px; border-bottom: 1px solid var(--outline-v); display: flex; align-items: center; gap: 10px; }
+  .card-hd h2 { font-size: 16px; font-weight: 700; }
+  .card-bd { padding: 20px; }
+
+  .dim-tabs { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; }
+  .dim-tab { padding: 10px 20px; border-radius: 20px; border: 1.5px solid var(--outline); font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: 0.2s; background: #fff; color: var(--on-sv); }
+  .dim-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  .rank-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--sv); opacity: 0; animation: fadeIn 0.4s forwards; }
+  @keyframes fadeIn { to { opacity: 1; } }
+  .rank-num { width: 30px; height: 30px; border-radius: 50%; background: var(--sv); font-size: 13px; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .rank-num.t1 { background: #f9a825; color: #fff; }
+  .rank-num.t2 { background: #90a4ae; color: #fff; }
+  .rank-num.t3 { background: #a1887f; color: #fff; }
+  .rank-info { flex: 1; min-width: 0; }
+  .rank-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .rank-bar-bg { height: 6px; background: var(--sv); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .rank-bar-fill { height: 100%; border-radius: 3px; transition: width 1s cubic-bezier(0.1,0.5,0.1,1); width: 0; }
+  .rank-val { font-size: 12px; color: var(--secondary); font-weight: 700; text-align: right; min-width: 80px; }
+
+  /* 查詢切換 */
+  .qtype-row { display: flex; gap: 12px; margin-bottom: 20px; padding: 0 4px; }
+  .qtab {
+    flex: 1; padding: 12px; border-radius: var(--r-md);
+    background: #e0e0e0; color: #757575;
+    font-size: 14px; font-weight: 700; font-family: 'Noto Sans TC', sans-serif;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    border: none; cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+  }
+  .qtab .material-icons { font-size: 20px; }
+  .qtab.active { background: var(--primary); color: #fff; box-shadow: 0 4px 10px rgba(69,90,100,0.3); }
+  .qtab:active { transform: scale(0.96); }
+
+  .field { margin-bottom: 20px; }
+  .flabel { font-size: 12px; font-weight: 700; color: var(--secondary); margin-bottom: 8px; display: block; }
+  select, input { width: 100%; font-family: 'Noto Sans TC', sans-serif; font-size: 16px; padding: 14px; border: 1.5px solid var(--outline-v); border-radius: var(--r-md); background: #fff; outline: none; transition: border-color 0.2s; -webkit-appearance: none; appearance: none; }
   select:focus, input:focus { border-color: var(--primary); }
-  .sel-ico { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--secondary); pointer-events: none; }
+  .btn { width: 100%; padding: 16px; background: var(--primary); color: #fff; border: none; border-radius: var(--r-xl); font-family: 'Noto Sans TC', sans-serif; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: background 0.2s; }
+  .btn:active { background: var(--primary-dark); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .btn { width: 100%; padding: 14px; background: var(--primary); color: #fff; border: none; border-radius: var(--r-xl); font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
-  .btn:disabled { background: var(--outline); opacity: 0.6; cursor: not-allowed; }
+  /* 結果卡 */
+  .result-card { border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--e2); background: #fff; margin-top: 20px; }
+  .result-hd { padding: 24px 20px; color: #fff; }
+  .res-name { font-size: 28px; font-weight: 900; }
+  .pills-wrap { display: flex; gap: 10px; overflow-x: auto; padding: 14px 20px; background: #fff; border-bottom: 1px solid var(--outline-v); scrollbar-width: none; }
+  .pill { flex-shrink: 0; padding: 10px 20px; border-radius: 20px; border: 1.5px solid var(--outline); font-size: 14px; font-weight: 600; cursor: pointer; }
+  .pill.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary); font-weight: 800; }
+  .ridership-box { margin: 20px; padding: 30px; background: var(--sv); border-radius: var(--r-md); text-align: center; }
+  .r-val { font-size: 48px; font-weight: 900; color: var(--primary); }
 
-  .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 300; display: none; align-items: center; justify-content: center; padding: 20px; }
-  .modal { background: #fff; border-radius: var(--r-lg); width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; box-shadow: var(--e2); }
-  .modal-hd { padding: 20px; text-align: center; border-bottom: 1px solid var(--outline-v); position: sticky; top:0; background: #fff; z-index: 10; }
-  .modal-bd { padding: 16px; }
-  .m-opt { width: 100%; padding: 16px; border: 1.5px solid var(--outline-v); border-radius: var(--r-md); margin-bottom: 8px; text-align: left; background: #fff; cursor: pointer; display: flex; flex-direction: column; transition: background 0.2s; }
-  .m-opt:active { background: #f0f0f0; }
+  /* 備註 */
+  .note-box { margin: 0 20px 20px; padding: 14px 16px; background: #fff8e1; border-left: 4px solid #ffb300; border-radius: 4px; display: flex; gap: 10px; align-items: flex-start; }
+  .note-box .material-icons { font-size: 18px; color: #ffb300; margin-top: 2px; }
+  .note-text { font-size: 13px; color: #795548; font-weight: 500; line-height: 1.5; }
+
+  .chart-container { padding: 0 20px 24px; height: 260px; }
+
+  .suggestions { border: 1px solid var(--outline); background: #fff; max-height: 220px; overflow-y: auto; border-radius: 0 0 12px 12px; display: none; position: absolute; width: 100%; z-index: 100; box-shadow: var(--e2); }
+  .sug-item { padding: 14px; border-bottom: 1px solid var(--sv); display: flex; justify-content: space-between; font-size: 15px; cursor: pointer; }
+
+  /* 特殊路線 Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 500; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .modal { background: #fff; border-radius: var(--r-lg); width: 100%; max-width: 420px; animation: zoomIn 0.25s ease-out; overflow: hidden; }
+  @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .m-opt { width: 100%; padding: 18px; border: 2px solid var(--sv); border-radius: var(--r-md); margin-bottom: 12px; text-align: left; background: #fff; cursor: pointer; font-family: 'Noto Sans TC', sans-serif; transition: 0.2s; }
+  .m-opt:active { background: var(--sv); }
   .m-opt.special { border-color: var(--primary); background: var(--primary-light); }
 
-  .result-card { border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--e2); background: #fff; margin-top: 16px; animation: slideIn 0.3s ease-out; }
-  @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-  
-  .result-hd { padding: 20px; color: #fff; }
-  .res-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.2); padding: 4px 12px; font-size: 11px; font-weight: 700; margin-bottom: 8px; border-radius: 20px; }
-  .res-name { font-size: 28px; font-weight: 900; margin-bottom: 4px; }
-  .res-meta { font-size: 13px; opacity: 0.9; display: flex; align-items: flex-start; gap: 6px; margin-top: 4px; }
+  /* 業者測試中 Modal */
+  .beta-modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 600;
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .beta-modal {
+    background: #fff;
+    border-radius: var(--r-lg);
+    width: 100%; max-width: 360px;
+    overflow: hidden;
+    animation: zoomIn 0.25s ease-out;
+    text-align: center;
+  }
+  .beta-modal-icon { font-size: 52px; color: #ff9800; display: block; margin: 32px auto 16px; }
+  .beta-modal h3 { font-size: 18px; font-weight: 900; color: var(--on-s); margin-bottom: 10px; }
+  .beta-modal p { font-size: 14px; color: var(--secondary); line-height: 1.75; padding: 0 24px; }
+  .beta-modal-footer { padding: 24px 20px; }
+  .beta-modal-footer .btn { background: var(--primary); }
 
-  .pills-wrap { display: flex; gap: 8px; overflow-x: auto; padding: 12px 16px; background: #fff; border-bottom: 1px solid var(--outline-v); scrollbar-width: none; }
-  .pill { flex-shrink: 0; padding: 8px 16px; border-radius: 20px; border: 1.5px solid var(--outline); font-size: 13px; font-weight: 600; cursor: pointer; color: var(--on-sv); }
-  .pill.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary); font-weight: 700; }
-
-  .ridership-box { margin: 16px; padding: 24px; background: var(--sv); border-radius: var(--r-md); display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .r-val { font-size: 46px; font-weight: 900; color: var(--primary); letter-spacing: -1.5px; }
-  .r-label { font-size: 13px; font-weight: 700; color: var(--secondary); letter-spacing: 1px; }
-  
-  .r-trend { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 12px; margin-top: 4px; }
-  .trend-up { background: #ffebee; color: #c62828; }
-  .trend-down { background: #e8f5e9; color: #2e7d32; }
-  .trend-neutral { background: #f5f5f5; color: #757575; }
-
-  .chart-container { padding: 16px; border-top: 1px solid var(--outline-v); height: 260px; }
-
-  .memo-box { margin: 0 16px 16px; padding: 14px; background: #fffef2; border: 1px solid #ffeeba; border-radius: var(--r-md); }
-  .memo-item { font-size: 13px; color: #856404; display: flex; gap: 6px; margin-bottom: 4px; line-height: 1.4; }
-
-  .suggestions { border: 1px solid var(--outline); background: #fff; max-height: 200px; overflow-y: auto; border-radius: 0 0 8px 8px; display: none; position: absolute; width: 100%; z-index: 100; box-shadow: var(--e2); }
-  .sug-item { padding: 12px; border-bottom: 1px solid var(--sv); display: flex; justify-content: space-between; font-size: 14px; cursor: pointer; }
-
-  .footer { text-align: center; padding: 24px 16px; color: var(--secondary); font-size: 12px; line-height: 1.6; }
-  .footer a { color: var(--primary); text-decoration: none; font-weight: 700; border-bottom: 1px solid var(--primary-light); }
+  .footer { text-align: center; padding: 40px 20px; color: var(--secondary); font-size: 12px; }
+  .loading-ov { position: fixed; inset: 0; background: #fff; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+  .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
-<div class="top-bar">
-  <span class="material-icons">analytics</span>
-  <h1>2025 大台南公車運量視覺化分析</h1>
+<div id="loading-ov" class="loading-ov">
+  <div class="spinner"></div>
+  <p style="color:var(--secondary); font-weight:700;">數據同步中...</p>
 </div>
 
-<div id="modal-overlay" class="modal-overlay">
-  <div class="modal">
-    <div class="modal-hd">
-      <h3>數據來源選擇</h3>
-      <p style="font-size:12px;color:#666">偵測到聯營或混合數據，請選擇：</p>
-    </div>
-    <div id="modal-bd" class="modal-bd"></div>
-    <div style="padding: 0 12px 20px;"><button class="btn" style="background: #f5f5f5; color: #666;" onclick="closeModal()">取消</button></div>
+<!-- 上方導覽列 -->
+<nav class="top-navbar">
+  <div class="nav-brand">
+    <span class="material-icons">directions_bus</span>
+    <h1>2025大台南公車運量分析</h1>
+  </div>
+  <button class="menu-btn" onclick="toggleSidebar(true)">
+    <span class="material-icons">menu</span>
+  </button>
+</nav>
+
+<!-- 側邊導覽 -->
+<div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar(false)"></div>
+<div id="sidebar" class="sidebar">
+  <div class="sidebar-hd">
+    <h2>更多功能開發中</h2>
+    <p style="font-size:12px;opacity:0.7">敬請期待</p>
+  </div>
+  <div class="sidebar-menu">
+    <button id="menu-home" class="menu-item active" onclick="switchPage('home')">
+      <span class="material-icons">dashboard</span> 數據總覽
+    </button>
+    <button id="menu-individual" class="menu-item" onclick="switchPage('individual')">
+      <span class="material-icons">manage_search</span> 個別查詢
+    </button>
+    <button id="menu-theme" class="menu-item" onclick="switchPage('theme')">
+      <span class="material-icons">auto_graph</span> 主題分析
+    </button>
+  </div>
+  <div style="padding:20px;border-top:1px solid #eee;text-align:center;color:#ccc;font-size:11px;">
+    System v1.7.2 | Data: 2025 Open Data
   </div>
 </div>
 
-<div id="p-home" class="page">
+<!-- 特殊路線 Modal -->
+<div id="modal-overlay" class="modal-overlay">
+  <div class="modal">
+    <div style="padding:24px 20px;text-align:center;border-bottom:1px solid #eee;">
+      <h3 id="modal-title">數據來源選擇</h3>
+    </div>
+    <div id="modal-bd" style="padding:20px;"></div>
+    <div style="padding:0 20px 24px;">
+      <button class="btn" style="background:#f5f5f5;color:#666;" onclick="closeModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 業者功能測試中 Modal -->
+<div id="beta-modal-overlay" class="beta-modal-overlay">
+  <div class="beta-modal">
+    <span class="material-icons beta-modal-icon">science</span>
+    <h3>功能測試中</h3>
+    <p>因原資料合併計算已交接路線數據，目前尚在調整中，無法作為實際數據參考</p>
+    <div class="beta-modal-footer">
+      <button class="btn" onclick="confirmBetaAndShow()">
+        <span class="material-icons">check_circle</span>我了解
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 頁面：數據首頁 -->
+<div id="p-home" class="page active">
+  <div class="dash-hero">
+    <div class="dash-hero-label">
+      <span class="material-icons" style="font-size:14px">bar_chart</span> 年度總搭乘人次
+    </div>
+    <div id="hero-val" class="dash-hero-val">0</div>
+    <div id="hero-sub" class="dash-hero-sub">數據讀取中...</div>
+  </div>
+
+  <div class="card">
+    <div class="card-hd">
+      <span class="material-icons">leaderboard</span>
+      <h2 id="rank-card-title">各系列運量排行</h2>
+    </div>
+    <div class="card-bd">
+      <div class="dim-tabs">
+        <div class="dim-tab active" onclick="switchRank('cat', this)">按路網系列</div>
+        <div class="dim-tab" onclick="switchRank('op', this)">按營運業者</div>
+      </div>
+      <div id="rank-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 頁面：個別查詢 -->
+<div id="p-individual" class="page">
+  <div class="section-title">
+    <span class="material-icons" style="font-size:32px">analytics</span> 個別查詢
+  </div>
+
   <div class="qtype-row">
-    <button class="qtab active" onclick="switchMode('cat', event)"><span class="material-icons">category</span> 類別</button>
-    <button class="qtab" onclick="switchMode('name', event)"><span class="material-icons">search</span> 搜尋</button>
+    <button class="qtab active" onclick="switchQueryMode('cat', event)">
+      <span class="material-icons">list</span> 依類別
+    </button>
+    <button class="qtab" onclick="switchQueryMode('name', event)">
+      <span class="material-icons">search</span> 依名稱
+    </button>
   </div>
 
   <div id="q-cat" class="card">
     <div class="card-bd">
       <div class="field">
-        <label class="flabel">1. 選擇類別</label>
-        <div class="sel-wrap">
-          <select id="sel-cat" onchange="onCatSelect()">
-            <option value="">-- 請選擇 --</option>
-            <option value="green">綠線</option>
-            <option value="blue">藍線</option>
-            <option value="brown">棕線</option>
-            <option value="orange">橘線</option>
-            <option value="yellow">黃線</option>
-            <option value="red">紅線</option>
-            <option value="life">生活公車</option>
-            <option value="metro">都會公車</option>
-            <option value="neighbor">厝邊公車</option>
-            <option value="tour">觀光公車</option>
-            <option value="hsr">高鐵接駁</option>
-          </select>
-          <span class="material-icons sel-ico">expand_more</span>
-        </div>
+        <label class="flabel">選擇系列</label>
+        <select id="sel-cat" onchange="onCatChange()"><option value="">-- 請選擇 --</option></select>
       </div>
       <div class="field">
-        <label class="flabel">2. 選擇路線</label>
-        <div class="sel-wrap">
-          <select id="sel-route" disabled onchange="checkBtn()"><option value="">請先選類別</option></select>
-          <span class="material-icons sel-ico">expand_more</span>
-        </div>
+        <label class="flabel">選擇公車路線</label>
+        <select id="sel-route" disabled onchange="document.getElementById('btn-query').disabled=false">
+          <option value="">請先選擇類別</option>
+        </select>
       </div>
-      <button id="btn-query" class="btn" disabled onclick="handlePreQuery()">開始分析</button>
+      <button id="btn-query" class="btn" disabled onclick="handleIndividualQuery()">查詢</button>
     </div>
   </div>
 
   <div id="q-name" class="card" style="display:none">
     <div class="card-bd">
       <div class="field" style="position:relative">
-        <label class="flabel">輸入關鍵字 (如: 904, 黃幹線...)</label>
-        <input type="text" id="in-name" placeholder="請輸入..." oninput="onInputSearch()">
+        <label class="flabel">輸入關鍵字</label>
+        <input type="text" id="in-name" placeholder="例如：黃幹線、綠12..." oninput="onKeywordInput()">
         <div id="sug-list" class="suggestions"></div>
       </div>
-      <button id="btn-search" class="btn" disabled onclick="handlePreSearch()">搜尋分析</button>
+      <button id="btn-search" class="btn" disabled onclick="handleKeywordQuery()">查詢</button>
     </div>
   </div>
 
   <div id="result-container"></div>
 </div>
 
+<!-- 頁面：主題分析 -->
+<div id="p-theme" class="page">
+  <div class="section-title">
+    <span class="material-icons" style="font-size:32px">auto_graph</span> 主題分析
+  </div>
+  <div style="text-align:center;padding:60px 20px;color:#999;">
+    <span class="material-icons" style="font-size:64px;opacity:0.3">construction</span>
+    <p style="margin-top:20px;">開發中</p>
+  </div>
+</div>
+
 <footer class="footer">
-  <p>數據校對 Izien</p>
-  <p>資訊來源 <a href="https://data.tainan.gov.tw/Resource/d3e854e6-8c5d-4091-a09c-efccf4fb1c8a" target="_blank">DATA.Tainan</a></p>
+   <p>版本:1.0.1</p>
+  <p>數據校對：Izien / 資料來源：DATA.TAINAN</p>
 </footer>
 
 <script>
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vThpZNHJtO5jyJQSpJR3G6AkdoCz5fkSRsTdoCA-P-vl5PnvvVd45YV_fXzrqcVrUA1nqXQckRZ23eI/pub?output=csv';
-
-const generateRange = (s, e) => Array.from({length: e - s + 1}, (_, i) => s + i);
+const rng = (s, e) => Array.from({length: e - s + 1}, (_, i) => s + i);
 
 const CATEGORIES = {
-  green: { label: "綠線", color: "#2e7d32", seqs: generateRange(1, 26).concat(generateRange(28, 38)) },
-  blue: { label: "藍線", color: "#1565c0", seqs: generateRange(39, 59) },
-  brown: { label: "棕線", color: "#5d4037", seqs: generateRange(60, 71) },
-  orange: { label: "橘線", color: "#e65100", seqs: generateRange(72, 87) },
-  yellow: { label: "黃線", color: "#f9a825", seqs: generateRange(88, 111).concat(generateRange(113, 122)) },
-  red: { label: "紅線", color: "#c62828", seqs: generateRange(123, 135) },
-  life: { label: "生活公車", color: "#455a64", seqs: generateRange(136, 137).concat(generateRange(139, 152)).concat([155, 168]).concat(generateRange(153, 154)) },
-  metro: { label: "都會公車", color: "#37474f", seqs: [138] },
-  neighbor: { label: "厝邊公車", color: "#6a1b9a", seqs: generateRange(156, 159) },
-  tour: { label: "觀光公車", color: "#ad1457", seqs: [161, 162, 160, 163, 166, 27, 112, 165, 164] },
-  hsr: { label: "高鐵接駁", color: "#e64a19", seqs: [167] }
+  green:    { label: '綠線',    color: '#4F6D56', seqs: rng(1, 26).concat(rng(28, 38)) },
+  blue:     { label: '藍線',    color: '#2C3E50', seqs: rng(39, 59) },
+  brown:    { label: '棕線',    color: '#8B5A2B', seqs: rng(60, 71) },
+  orange:   { label: '橘線',    color: '#E67E22', seqs: rng(72, 87) },
+  yellow:   { label: '黃線',    color: '#D4AC0D', seqs: rng(88, 111).concat(rng(113, 122)) },
+  red:      { label: '紅線',    color: '#922B21', seqs: rng(123, 135) },
+  life:     { label: '生活公車', color: '#E6B0AA', seqs: [...rng(136, 137), ...rng(139, 155), 168] },
+  metro:    { label: '都會公車', color: '#A9CCE3', seqs: [138] },
+  neighbor: { label: '厝邊公車', color: '#A2D9CE', seqs: rng(156, 159) },
+  tour:     { label: '觀光公車', color: '#BA4A00', seqs: [27, 112, ...rng(160, 166)] },
+  hsr:      { label: '高鐵接駁', color: '#F37021', seqs: [167] }
 };
 
-const SERVICE_SPECIALS = ["綠14", "綠15", "綠20", "棕2", "黃2", "黃5", "黃15", "黃20", "紅11", "紅13"];
-const JOINT_SPECIALS = ["黃幹線", "棕幹線"];
 const SPECIAL_RULES = {
-  "綠12-1": {
-    type: "section",
-    options: [
-      { id: "13", label: "左鎮果菜市場-南化區公所", desc: "單獨查看 Seq 13 數據" },
-      { id: "14", label: "左鎮果菜市場-厚德紫竹寺", desc: "單獨查看 Seq 14 數據" },
-      { id: "sum", label: "全部合併計算", desc: "Seq 13 + 14 加總", isSum: true }
-    ]
-  }
+  '綠12-1': { options: [{id:'13',label:'左鎮果菜市場-南化區公所'},{id:'14',label:'左鎮果菜市場-厚德紫竹寺'},{id:'sum',label:'合併計算',isSum:true}] },
+  '黃幹線':  { type: 'joint', ops: ['興南', '新營'] },
+  '棕幹線':  { type: 'joint', ops: ['興南', '新營'] }
 };
-SERVICE_SPECIALS.forEach(r => { SPECIAL_RULES[r] = { type: "service" }; });
-JOINT_SPECIALS.forEach(r => { SPECIAL_RULES[r] = { type: "joint" }; });
+['綠14','綠15','綠20','棕2','黃2','黃5','黃15','黃20','紅11','紅13'].forEach(r => {
+  SPECIAL_RULES[r] = { type: 'hybrid' };
+});
 
 let db = [];
 let trendChart = null;
+let pendingOpTab = null; // 等待確認的業者 tab 元素
 
-const cleanNum = (v) => v ? parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0 : 0;
-const formatNum = (v) => Math.round(cleanNum(v)).toLocaleString();
-
+// ── INIT ──────────────────────────────────────────────────
 async function init() {
   try {
     const res = await fetch(CSV_URL);
     const text = await res.text();
     const rows = parseCSV(text);
     db = rows.slice(1).map(r => ({
-      seq: parseInt(r[0]), name: r[1]?.trim(), path: r[2]?.trim(),
-      category: r[3]?.trim(), operator: r[4]?.trim(),
-      months: {
-        S: r[18], G: r[6], H: r[7], I: r[8], J: r[9], K: r[10],
-        L: r[11], M: r[12], N: r[13], O: r[14], P: r[15], Q: r[16], R: r[17]
-      },
-      memo1: r[19]?.trim(), memo2: r[20]?.trim()
+      seq:      parseInt(r[0]),
+      name:     r[1]?.trim(),
+      path:     r[2]?.trim(),
+      catLabel: r[3]?.trim(),
+      operator: r[4]?.trim(),
+      note:     r[19]?.trim(),
+      months:   { S:r[18], G:r[6], H:r[7], I:r[8], J:r[9], K:r[10], L:r[11], M:r[12], N:r[13], O:r[14], P:r[15], Q:r[16], R:r[17] }
     })).filter(i => !isNaN(i.seq));
-  } catch (e) { console.error(e); }
+
+    buildDashboard();
+    buildCategoryDropdown();
+    document.getElementById('loading-ov').style.display = 'none';
+  } catch (e) {
+    alert('數據載入失敗：' + e.message);
+  }
 }
 
 function parseCSV(text) {
@@ -234,169 +398,261 @@ function parseCSV(text) {
   const lines = text.split(/\r?\n/);
   for (let line of lines) {
     if (!line.trim()) continue;
-    const parts = []; let cur = ""; let inQuotes = false;
+    const parts = []; let cur = ''; let inQ = false;
     for (let i = 0; i < line.length; i++) {
-      let char = line[i];
-      if (char === '"') inQuotes = !inQuotes;
-      else if (char === ',' && !inQuotes) { parts.push(cur); cur = ""; }
-      else cur += char;
+      const c = line[i];
+      if (c === '"') inQ = !inQ;
+      else if (c === ',' && !inQ) { parts.push(cur); cur = ''; }
+      else cur += c;
     }
     parts.push(cur); result.push(parts);
   }
   return result;
 }
 
-function handlePreQuery() {
-  const seq = parseInt(document.getElementById('sel-route').value);
-  const item = db.find(i => i.seq === seq);
-  if (item && SPECIAL_RULES[item.name]) openSpecialModal(item.name);
-  else renderResult(seq);
+const cleanNum = v => v ? parseFloat(String(v).replace(/[^\d.-]/g, '')) || 0 : 0;
+const fmtNum = v => Math.round(cleanNum(v)).toLocaleString();
+
+// ── DASHBOARD ─────────────────────────────────────────────
+function buildDashboard() {
+  const total = db.reduce((acc, cur) => acc + cleanNum(cur.months.S), 0);
+  document.getElementById('hero-val').textContent = fmtNum(total);
+  document.getElementById('hero-sub').textContent = `共 ${db.length} 筆資料`;
+  renderRank('cat');
 }
 
-function handlePreSearch() {
-  const val = document.getElementById('in-name').value.trim();
-  const match = db.find(i => i.name === val);
-  if (match && SPECIAL_RULES[match.name]) openSpecialModal(match.name);
-  else if (match) renderResult(match.seq);
-}
+function renderRank(dim) {
+  const container = document.getElementById('rank-list');
+  let items = [];
 
-function openSpecialModal(routeName) {
-  const rule = SPECIAL_RULES[routeName];
-  const bd = document.getElementById('modal-bd');
-  let opts = [];
-  if (rule.type === "section") opts = rule.options;
-  else if (rule.type === "service") {
-    opts = [
-      { id: `bus_${routeName}`, label: "一般公車", desc: "查看「幹支線」營運數據", filter: "幹支線", filterKey: "category" },
-      { id: `taxi_${routeName}`, label: "小黃公車", desc: "查看「小黃公車」營運數據", filter: "小黃公車", filterKey: "category" },
-      { id: `sum_${routeName}`, label: "全部合併計算", desc: "一般公車 + 小黃公車 加總", isSum: true }
-    ];
-  } else if (rule.type === "joint") {
-    opts = [
-      { id: `xin_${routeName}`, label: "興南客運", desc: "查看單獨「興南」營運數據", filter: "興南", filterKey: "operator" },
-      { id: `ying_${routeName}`, label: "新營客運", desc: "查看單獨「新營」營運數據", filter: "新營", filterKey: "operator" },
-      { id: `sum_${routeName}`, label: "聯營總運量", desc: "興南 + 新營 數據加總", isSum: true }
-    ];
+  if (dim === 'cat') {
+    items = Object.values(CATEGORIES).map(c => ({
+      label: c.label, color: c.color,
+      value: db.filter(r => c.seqs.includes(r.seq)).reduce((s, r) => s + cleanNum(r.months.S), 0)
+    }));
+  } else {
+    const map = {};
+    db.forEach(r => {
+      const ops = (r.operator || '').split(/[、,\/／]/).map(o => o.trim()).filter(Boolean);
+      ops.forEach(op => { map[op] = (map[op] || 0) + cleanNum(r.months.S); });
+    });
+    items = Object.entries(map).map(([label, value]) => ({ label, value, color: '#607d8b' }));
   }
-  bd.innerHTML = opts.map(o => `
-    <button class="m-opt ${o.isSum?'special':''}" onclick="selectSpecialOption('${routeName}','${o.id}','${o.filter||''}','${o.filterKey||''}')">
-      <b style="font-size:16px">${o.label}</b>
-      <span style="font-size:12px;color:#666">${o.desc}</span>
-    </button>
-  `).join('');
-  document.getElementById('modal-overlay').style.display = 'flex';
+
+  items.sort((a, b) => b.value - a.value);
+  const max = items[0]?.value || 1;
+
+  container.innerHTML = items.map((item, i) => {
+    const pct = (item.value / max) * 100;
+    const numCls = i === 0 ? 't1' : i === 1 ? 't2' : i === 2 ? 't3' : '';
+    return `
+      <div class="rank-item" style="animation-delay:${i * 0.05}s">
+        <div class="rank-num ${numCls}">${i + 1}</div>
+        <div class="rank-info">
+          <div class="rank-name">${item.label}</div>
+          <div class="rank-bar-bg">
+            <div class="rank-bar-fill" id="bar-${dim}-${i}" style="background:${item.color}"></div>
+          </div>
+        </div>
+        <div class="rank-val">${fmtNum(item.value)} 人次</div>
+      </div>`;
+  }).join('');
+
+  setTimeout(() => {
+    items.forEach((item, i) => {
+      const el = document.getElementById(`bar-${dim}-${i}`);
+      if (el) el.style.width = (item.value / max * 100) + '%';
+    });
+  }, 100);
 }
 
-function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
-
-function selectSpecialOption(routeName, optionId, filterValue, filterKey) {
-  closeModal();
-  if (optionId.includes('sum')) renderSumResult(routeName);
-  else if (filterValue) {
-    const item = db.find(i => i.name === routeName && i[filterKey].includes(filterValue));
-    if (item) displayResult(item, false, `(${filterValue})`);
-  } else renderResult(parseInt(optionId));
+// ── DIM SWITCH（含業者測試中提示）─────────────────────────
+function switchRank(dim, el) {
+  if (dim === 'cat') {
+    // 路網系列直接切換
+    document.querySelectorAll('.dim-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('rank-card-title').textContent = '各系列運量排行';
+    renderRank('cat');
+  } else {
+    // 業者：先跳測試中提示，記下 tab 元素等確認後再切
+    pendingOpTab = el;
+    document.getElementById('beta-modal-overlay').style.display = 'flex';
+  }
 }
 
-function renderSumResult(routeName) {
-  const parts = (SPECIAL_RULES[routeName].type === "section") ? db.filter(i => [13,14].includes(i.seq)) : db.filter(i => i.name === routeName);
-  if (!parts.length) return;
-  const combined = {
-    name: routeName, seq: parts.map(p => p.seq).join(' + '), path: "合併運量分析數據",
-    operator: parts.map(p => p.operator).filter((v, i, a) => a.indexOf(v) === i).join('、'), 
-    months: {}, memo1: parts[0].memo1, memo2: parts[0].memo2
-  };
-  ["S","G","H","I","J","K","L","M","N","O","P","Q","R"].forEach(k => {
-    combined.months[k] = parts.reduce((acc, curr) => acc + cleanNum(curr.months[k]), 0);
+function confirmBetaAndShow() {
+  document.getElementById('beta-modal-overlay').style.display = 'none';
+  if (!pendingOpTab) return;
+  document.querySelectorAll('.dim-tab').forEach(t => t.classList.remove('active'));
+  pendingOpTab.classList.add('active');
+  document.getElementById('rank-card-title').textContent = '各業者運量排行';
+  renderRank('op');
+  pendingOpTab = null;
+}
+
+// ── SIDEBAR / PAGE ────────────────────────────────────────
+function toggleSidebar(open) {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebar-overlay');
+  if (open) {
+    ov.style.display = 'block';
+    setTimeout(() => { ov.style.opacity = '1'; sb.classList.add('open'); }, 10);
+  } else {
+    sb.classList.remove('open');
+    ov.style.opacity = '0';
+    setTimeout(() => { ov.style.display = 'none'; }, 300);
+  }
+}
+
+function switchPage(pageId) {
+  toggleSidebar(false);
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('p-' + pageId).classList.add('active');
+  document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+  document.getElementById('menu-' + pageId).classList.add('active');
+  window.scrollTo(0, 0);
+  if (pageId === 'home') renderRank('cat');
+}
+
+// ── CATEGORY DROPDOWN ─────────────────────────────────────
+function buildCategoryDropdown() {
+  const sel = document.getElementById('sel-cat');
+  for (let key in CATEGORIES) {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = CATEGORIES[key].label;
+    sel.appendChild(opt);
+  }
+}
+
+function onCatChange() {
+  const catKey = document.getElementById('sel-cat').value;
+  const sel = document.getElementById('sel-route');
+  sel.innerHTML = '<option value="">-- 請選擇路線 --</option>';
+  document.getElementById('btn-query').disabled = true;
+  if (!catKey) { sel.disabled = true; return; }
+  const seen = new Set();
+  db.filter(i => CATEGORIES[catKey].seqs.includes(i.seq)).forEach(item => {
+    if (!seen.has(item.name)) {
+      const opt = document.createElement('option');
+      opt.value = item.seq;
+      opt.textContent = item.name;
+      sel.appendChild(opt);
+      seen.add(item.name);
+    }
   });
-  displayResult(combined, true, "(加總)");
+  sel.disabled = false;
 }
 
-function renderResult(seq) {
+// ── QUERY ─────────────────────────────────────────────────
+function handleIndividualQuery() {
+  const seq = parseInt(document.getElementById('sel-route').value);
+  checkSpecialAndRender(seq);
+}
+
+function handleKeywordQuery() {
+  const name = document.getElementById('in-name').value.trim();
+  const item = db.find(i => i.name === name);
+  if (item) checkSpecialAndRender(item.seq);
+}
+
+function checkSpecialAndRender(seq) {
   const item = db.find(i => i.seq === seq);
-  if (item) displayResult(item);
+  if (!item) return;
+
+  if (SPECIAL_RULES[item.name]) {
+    const rule = SPECIAL_RULES[item.name];
+    const bd = document.getElementById('modal-bd');
+    let opts = [];
+
+    if (item.name === '綠12-1') {
+      opts = rule.options;
+    } else if (rule.type === 'joint') {
+      opts = rule.ops.map(o => ({ id: o, label: `${o} 數據`, filter: o }));
+      opts.push({ id: 'sum', label: '聯營總和分析', isSum: true });
+    } else if (rule.type === 'hybrid') {
+      opts = [
+        { id: 'bus',  label: '幹支線數據',    filter: '幹支線' },
+        { id: 'taxi', label: '小黃公車數據',  filter: '小黃公車' },
+        { id: 'sum',  label: '總運量合計',    isSum: true }
+      ];
+    }
+
+    bd.innerHTML = opts.map(o =>
+      `<button class="m-opt ${o.isSum ? 'special' : ''}"
+        onclick="applySpecial('${item.name}', '${o.id}', '${o.filter || ''}')">
+        <b>${o.label}</b>
+      </button>`
+    ).join('');
+    document.getElementById('modal-overlay').style.display = 'flex';
+  } else {
+    displayResult(item);
+  }
 }
 
-function displayResult(item, isSum = false, suffix = "") {
-  let catInfo = { label: "一般路線", color: "#455a64" };
-  const firstSeqNum = parseInt(item.seq.toString().split(' + ')[0]);
-  for (let k in CATEGORIES) { if (CATEGORIES[k].seqs.includes(firstSeqNum)) { catInfo = CATEGORIES[k]; break; } }
+function applySpecial(name, id, filter) {
+  closeModal();
+  if (id === 'sum') {
+    const parts = db.filter(i => name === '綠12-1' ? [13, 14].includes(i.seq) : i.name === name);
+    const combined = {
+      name, seq: parts[0].seq,
+      operator: '合併數據', path: '綜合分析',
+      months: { S: 0 },
+      note: parts.map(p => p.note).filter(n => n && n !== '').join(' | ')
+    };
+    ['S','G','H','I','J','K','L','M','N','O','P','Q','R'].forEach(k => {
+      combined.months[k] = parts.reduce((a, c) => a + cleanNum(c.months[k]), 0);
+    });
+    displayResult(combined, '(合計)');
+  } else if (filter) {
+    const target = db.find(i => i.name === name && ((i.operator || '').includes(filter) || i.catLabel === filter));
+    if (target) displayResult(target, `(${filter})`);
+  } else {
+    displayResult(db.find(i => i.seq === parseInt(id)));
+  }
+}
 
-  const monthKeys = ["G","H","I","J","K","L","M","N","O","P","Q","R"];
-  
-  let firstActiveMonthIdx = -1;
-  const monthData = monthKeys.map((k, idx) => {
-    const val = cleanNum(item.months[k]);
-    if (val > 0 && firstActiveMonthIdx === -1) firstActiveMonthIdx = idx;
-    return val;
-  });
+function closeModal() {
+  document.getElementById('modal-overlay').style.display = 'none';
+}
 
-  const trendData = monthKeys.map((k, idx) => {
-    const cur = monthData[idx];
-    if (idx === 0 || idx === firstActiveMonthIdx) return null;
-    const prev = monthData[idx-1];
-    if (prev === 0) return null;
-    return (((cur - prev) / prev) * 100).toFixed(1);
-  });
+// ── RESULT ────────────────────────────────────────────────
+function displayResult(item, suffix = '') {
+  let cat = { color: '#455a64' };
+  for (let k in CATEGORIES) {
+    if (CATEGORIES[k].seqs.includes(item.seq)) { cat = CATEGORIES[k]; break; }
+  }
 
-  const container = document.getElementById('result-container');
-  container.innerHTML = `
+  const monthKeys = ['G','H','I','J','K','L','M','N','O','P','Q','R'];
+  const noteHtml = (item.note && item.note.trim())
+    ? `<div class="note-box">
+        <span class="material-icons">info</span>
+        <div class="note-text">${item.note}</div>
+       </div>`
+    : '';
+
+  document.getElementById('result-container').innerHTML = `
     <div class="result-card">
-      <div class="result-hd" style="background:${catInfo.color}">
-        <div class="res-badge"><span class="material-icons" style="font-size:12px">directions_bus</span> ${catInfo.label}</div>
-        <div class="res-name">${item.name} <span style="font-size:16px;opacity:0.8">${suffix}</span></div>
-        <div class="res-meta"><span class="material-icons">business</span><span>${item.operator}</span></div>
-        <div class="res-meta"><span class="material-icons">route</span><span>${item.path}</span></div>
+      <div class="result-hd" style="background:${cat.color}">
+        <div class="res-name">${item.name} ${suffix}</div>
+        <div style="font-size:14px;opacity:0.8;">${item.operator} | ${item.path}</div>
       </div>
       <div class="pills-wrap">
-        <div class="pill active" onclick="updateUI(this, '${item.months.S}', '全年度總計', null)">年度</div>
-        ${monthKeys.map((k, i) => {
-          if (monthData[i] <= 0) return '';
-          return `<div class="pill" onclick="updateUI(this, '${item.months[k]}', '${i+1}月運量', ${trendData[i]}, ${i})">${i+1}月</div>`;
-        }).join('')}
+        <div class="pill active" onclick="updateV(this,'${item.months.S}','全年度統計')">全年度</div>
+        ${monthKeys.map((k, i) => cleanNum(item.months[k]) > 0
+          ? `<div class="pill" onclick="updateV(this,'${item.months[k]}','${i+1}月運量')">${i+1}月</div>`
+          : '').join('')}
       </div>
       <div class="ridership-box">
-        <div id="v-label" class="r-label">全年度總計</div>
-        <div id="v-num" class="r-val">${formatNum(item.months.S)}</div>
-        <div id="v-trend" class="r-trend" style="display:none"></div>
+        <div id="v-label" style="font-size:14px;color:#666;margin-bottom:5px;">全年度統計</div>
+        <div id="v-num" class="r-val">${fmtNum(item.months.S)}</div>
       </div>
+      ${noteHtml}
       <div class="chart-container"><canvas id="trendChart"></canvas></div>
-      ${(item.memo1 || item.memo2) ? `<div class="memo-box">
-        ${item.memo1 ? `<div class="memo-item"><span class="material-icons">info</span><span>${item.memo1}</span></div>`:''}
-        ${item.memo2 ? `<div class="memo-item"><span class="material-icons">event_note</span><span>${item.memo2}</span></div>`:''}
-      </div>` : ''}
-    </div>
-  `;
-  
-  createTrendChart(monthData, catInfo.color);
-  container.scrollIntoView({ behavior: 'smooth' });
-}
+    </div>`;
 
-function updateUI(el, val, label, trend, idx = null) {
-  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('v-label').textContent = label;
-  document.getElementById('v-num').textContent = formatNum(val);
-  
-  const tr = document.getElementById('v-trend');
-  if (trend !== null) {
-    tr.style.display = 'flex';
-    const icon = trend > 0 ? 'trending_up' : (trend < 0 ? 'trending_down' : 'trending_flat');
-    const cls = trend > 0 ? 'trend-up' : (trend < 0 ? 'trend-down' : 'trend-neutral');
-    tr.className = 'r-trend ' + cls;
-    tr.innerHTML = `<span class="material-icons" style="font-size:16px">${icon}</span> 較上月 ${trend > 0 ? '+':''}${trend}%`;
-  } else {
-    tr.style.display = 'none';
-  }
-
-  if (trendChart && idx !== null) {
-    trendChart.setActiveElements([{datasetIndex: 0, index: idx}]);
-    trendChart.tooltip.setActiveElements([{datasetIndex: 0, index: idx}], {x: 0, y: 0});
-    trendChart.update();
-  }
-}
-
-function createTrendChart(data, color) {
+  const data = monthKeys.map(k => cleanNum(item.months[k]));
   const ctx = document.getElementById('trendChart').getContext('2d');
   if (trendChart) trendChart.destroy();
   trendChart = new Chart(ctx, {
@@ -404,86 +660,64 @@ function createTrendChart(data, color) {
     data: {
       labels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
       datasets: [{
-        label: '每月運量人次',
-        data: data,
-        borderColor: color,
-        backgroundColor: color + '1A',
-        borderWidth: 4,
-        fill: true,
-        tension: 0.4,
-        pointRadius: 4,
-        pointHoverRadius: 8,
-        pointBackgroundColor: '#fff',
-        pointBorderWidth: 3
+        data, borderColor: cat.color, tension: 0.4, fill: true,
+        backgroundColor: cat.color + '22',
+        pointBackgroundColor: '#fff', pointRadius: 4
       }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { 
-        legend: { display: false }, 
-        tooltip: { 
-          cornerRadius: 8, 
-          padding: 10,
-          callbacks: {
-            label: (ctx) => ` 運量: ${ctx.parsed.y.toLocaleString()} 人次`
-          }
-        } 
-      },
-      scales: {
-        y: { beginAtZero: false, display: false },
-        x: { grid: { display: false }, ticks: { font: { weight: '600' } } }
-      }
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { display: false }, x: { grid: { display: false } } }
     }
   });
+  document.getElementById('result-container').scrollIntoView({ behavior: 'smooth' });
 }
 
-function switchMode(m, e) {
-  document.getElementById('q-cat').style.display = m==='cat'?'block':'none';
-  document.getElementById('q-name').style.display = m==='name'?'block':'none';
-  document.querySelectorAll('.qtab').forEach(t => t.classList.remove('active'));
-  e.currentTarget.classList.add('active');
+function updateV(el, val, label) {
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('v-label').textContent = label;
+  document.getElementById('v-num').textContent = fmtNum(val);
 }
 
-function onCatSelect() {
-  const catKey = document.getElementById('sel-cat').value;
-  const sel = document.getElementById('sel-route');
-  sel.innerHTML = '<option value="">-- 請選擇路線 --</option>';
-  if (!catKey) { sel.disabled = true; return; }
-  const seen = new Set();
-  db.filter(i => CATEGORIES[catKey].seqs.includes(i.seq)).forEach(item => {
-    if (!seen.has(item.name)) {
-      const opt = document.createElement('option'); opt.value = item.seq; opt.textContent = item.name;
-      sel.appendChild(opt); seen.add(item.name);
-    }
-  });
-  sel.disabled = false;
-}
-
-function checkBtn() { document.getElementById('btn-query').disabled = !document.getElementById('sel-route').value; }
-
-function onInputSearch() {
+// ── KEYWORD SEARCH ────────────────────────────────────────
+function onKeywordInput() {
   const v = document.getElementById('in-name').value.trim().toLowerCase();
   const sug = document.getElementById('sug-list');
   if (!v) { sug.style.display = 'none'; return; }
   const seen = new Set();
-  const matches = db.filter(i => i.name.toLowerCase().includes(v)).filter(i => {
-    if (seen.has(i.name)) return false;
-    seen.add(i.name); return true;
-  }).slice(0, 5);
+  const matches = db
+    .filter(i => i.name.toLowerCase().includes(v))
+    .filter(i => { if (seen.has(i.name)) return false; seen.add(i.name); return true; })
+    .slice(0, 5);
   if (matches.length) {
-    sug.innerHTML = matches.map(m => `<div class="sug-item" onclick="selectSug('${m.seq}','${m.name}')"><b>${m.name}</b><span style="color:#888;font-size:11px">${m.operator}</span></div>`).join('');
+    sug.innerHTML = matches.map(m =>
+      `<div class="sug-item" onclick="selectSug('${m.name}')">
+        <b>${m.name}</b>
+        <span style="color:#999;font-size:12px">${m.operator}</span>
+      </div>`
+    ).join('');
     sug.style.display = 'block';
     document.getElementById('btn-search').disabled = false;
-  } else sug.style.display = 'none';
+  } else {
+    sug.style.display = 'none';
+  }
 }
 
-function selectSug(seq, name) {
+function selectSug(name) {
   document.getElementById('in-name').value = name;
   document.getElementById('sug-list').style.display = 'none';
-  if (SPECIAL_RULES[name]) openSpecialModal(name);
-  else renderResult(parseInt(seq));
+  handleKeywordQuery();
 }
+
+function switchQueryMode(m, e) {
+  document.getElementById('q-cat').style.display  = m === 'cat'  ? 'block' : 'none';
+  document.getElementById('q-name').style.display = m === 'name' ? 'block' : 'none';
+  document.querySelectorAll('.qtab').forEach(t => t.classList.remove('active'));
+  e.currentTarget.classList.add('active');
+}
+
 init();
 </script>
 </body>
